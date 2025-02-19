@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravity Simulation</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; background: black; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="planetCount" style="position: absolute; top: 10px; left: 10px; color: white; font-size: 18px;"></div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const star = { x: canvas.width / 2, y: canvas.height / 2, radius: 50, color: 'yellow', mass: 1000 };
+        const objects = []; // Objects to simulate gravity with
+        let stableCount = 0; // Count of stable planets
+
+        const timeFactor = 0.2; // Slow down factor (80% slower)
+
+        // Create initial object
+        objects.push({ x: canvas.width / 4, y: canvas.height / 4, radius: 10, color: 'blue', mass: 10, vx: 0, vy: 0, orbitCount: 0, prevPos: null });
+
+        // Draw the star
+        function drawStar() {
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+            ctx.fillStyle = star.color;
+            ctx.fill();
+        }
+
+        // Draw objects (planets)
+        function drawObjects() {
+            objects.forEach(obj => {
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+                ctx.fillStyle = obj.color;
+                ctx.fill();
+            });
+        }
+
+        // Update objects based on gravity
+        function updateObjects() {
+            stableCount = 0; // Reset stable count
+
+            objects.forEach(obj => {
+                const dx = star.x - obj.x;
+                const dy = star.y - obj.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const force = (star.mass * obj.mass) / (distance * distance); // Gravitational force
+
+                const fx = (force * dx) / distance;
+                const fy = (force * dy) / distance;
+
+                // Apply velocity changes due to gravity
+                obj.vx += fx;
+                obj.vy += fy;
+
+                // Update positions
+                obj.x += obj.vx;
+                obj.y += obj.vy;
+
+                // Track the orbits by checking if the planet returns to its starting position
+                if (obj.prevPos) {
+                    const distanceTraveled = Math.sqrt(Math.pow(obj.x - obj.prevPos.x, 2) + Math.pow(obj.y - obj.prevPos.y, 2));
+                    if (distanceTraveled < 5) { // Threshold for "returning" to starting point
+                        obj.orbitCount++;
+                    }
+                }
+
+                // Save the current position for the next orbit check
+                obj.prevPos = { x: obj.x, y: obj.y };
+
+                // Check if the planet has completed at least 10 orbits (stable)
+                if (obj.orbitCount >= 10) {
+                    stableCount++; // Increment stable orbit count
+                }
+            });
+        }
+
+        // Generate a random color
+        function randomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Generate a new planet on click with random mass between 1% and 10% of the star's mass
+        canvas.addEventListener('click', (e) => {
+            const mass = star.mass * (Math.random() * 0.09 + 0.01); // Random mass between 1% and 10% of star's mass
+            const radius = Math.random() * 10 + 5; // Random radius between 5 and 15
+            const planet = {
+                x: e.clientX,
+                y: e.clientY,
+                radius: radius,
+                color: randomColor(), // Random color for each planet
+                mass: mass,
+                vx: 0,
+                vy: 0,
+                orbitCount: 0,
+                prevPos: null
+            };
+
+            // Calculate the velocity needed for an orbit (perpendicular to the radius)
+            const dx = star.x - planet.x;
+            const dy = star.y - planet.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const speed = Math.sqrt((star.mass * 100) / distance); // Simplified velocity calculation for elliptical orbit
+
+            // Velocity components perpendicular to the position vector
+            planet.vx = -dy * speed / distance;
+            planet.vy = dx * speed / distance;
+
+            objects.push(planet);
+        });
+
+        // Animate the simulation
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawStar();
+            updateObjects();
+            drawObjects();
+
+            // Update and display the count of stable orbits
+            document.getElementById('planetCount').innerText = `Stable Orbits: ${stableCount}`;
+
+            setTimeout(() => requestAnimationFrame(animate), 50 * timeFactor); // Slow down by 80%
+        }
+
+        animate();
+    </script>
+</body>
+</html>
