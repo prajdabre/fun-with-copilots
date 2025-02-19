@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            border: 1px solid red; /* For debugging */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="debug">Debug Info</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const debug = document.getElementById('debug');
+
+        canvas.width = Math.max(window.innerWidth, 800);
+        canvas.height = Math.max(window.innerHeight, 800);
+        debug.innerText = `Canvas Size: ${canvas.width}x${canvas.height}`;
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        function drawOrbit(radius) {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.stroke();
+        }
+
+        function drawPlanet(x, y, radius, color, name) {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.fillText(name, x + radius + 5, y);
+        }
+
+        function drawAsteroid(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fillStyle = 'gray';
+            ctx.fill();
+        }
+
+        let frameCount = 0;
+
+        const planets = [
+            { name: 'Mercury', radius: 3, color: 'gray', orbit: 60, angle: 0, speed: 2.5 },
+            { name: 'Venus', radius: 6, color: 'yellow', orbit: 90, angle: 0, speed: 2.0 },
+            { name: 'Earth', radius: 7, color: 'blue', orbit: 130, angle: 0, speed: 1.8 },
+            { name: 'Mars', radius: 5, color: 'red', orbit: 170, angle: 0, speed: 1.5 },
+            { name: 'Jupiter', radius: 12, color: 'orange', orbit: 250, angle: 0, speed: 1.0 },
+            { name: 'Saturn', radius: 10, color: 'gold', orbit: 300, angle: 0, speed: 0.8 },
+            { name: 'Uranus', radius: 8, color: 'lightblue', orbit: 350, angle: 0, speed: 0.6 },
+            { name: 'Neptune', radius: 8, color: 'blue', orbit: 400, angle: 0, speed: 0.5 },
+            { name: 'Pluto', radius: 3, color: 'white', orbit: 440, angle: 0, speed: 0.3 }
+        ];
+
+        const asteroidBelt = [];
+        for (let i = 0; i < 150; i++) {
+            let orbit = Math.random() * (240 - 180) + 180;
+            let angle = Math.random() * Math.PI * 2;
+            let speed = Math.random() * 0.4 + 0.2;
+            asteroidBelt.push({ orbit, angle, speed });
+        }
+
+        const kuiperBelt = [];
+        for (let i = 0; i < 200; i++) {
+            let orbit = Math.random() * (650 - 600) + 450;
+            let angle = Math.random() * Math.PI * 2;
+            let speed = Math.random() * 0.2 + 0.1;
+            kuiperBelt.push({ orbit, angle, speed });
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            frameCount++;
+
+            drawPlanet(centerX, centerY, 20, 'yellow', 'Sun');
+            planets.forEach(planet => drawOrbit(planet.orbit));
+
+            asteroidBelt.forEach(asteroid => {
+                asteroid.angle += asteroid.speed * (Math.PI / 180);
+                const x = centerX + Math.cos(asteroid.angle) * asteroid.orbit;
+                const y = centerY + Math.sin(asteroid.angle) * asteroid.orbit;
+                drawAsteroid(x, y, Math.random() * 2 + 1);
+            });
+
+            kuiperBelt.forEach(asteroid => {
+                asteroid.angle += asteroid.speed * (Math.PI / 180);
+                const x = centerX + Math.cos(asteroid.angle) * asteroid.orbit;
+                const y = centerY + Math.sin(asteroid.angle) * asteroid.orbit;
+                drawAsteroid(x, y, Math.random() * 2 + 1);
+            });
+
+            planets.forEach(planet => {
+                planet.angle += planet.speed * (Math.PI / 180);
+                const x = centerX + Math.cos(planet.angle) * planet.orbit;
+                const y = centerY + Math.sin(planet.angle) * planet.orbit;
+                drawPlanet(x, y, planet.radius, planet.color, planet.name);
+            });
+
+            if (frameCount % 60 === 0) {
+                debug.innerText = `Frames: ${frameCount}, Canvas Size: ${canvas.width}x${canvas.height}`;
+            }
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
