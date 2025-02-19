@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Solar System with Moons</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<script>
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Orbit Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    // Light (Sunlight)
+    const light = new THREE.PointLight(0xffffff, 2, 200);
+    light.position.set(0, 0, 0);
+    scene.add(light);
+
+    // Sun
+    const sunGeometry = new THREE.SphereGeometry(3, 32, 32);
+    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc00, emissive: 0xffcc00 });
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+    scene.add(sun);
+
+    // Function to create a label sprite
+    function createLabel(text, position) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = '24px Arial';
+        context.fillStyle = 'white';
+        context.fillText(text, 10, 30);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.position.copy(position);
+        sprite.scale.set(5, 2.5, 1);
+        return sprite;
+    }
+
+    // Planets Data
+    const planets = [
+        { name: "Mercury", size: 0.5, distance: 5, color: 0xaaaaaa, speed: 0.02, moons: [] },
+        { name: "Venus", size: 0.8, distance: 10, color: 0xff8800, speed: 0.015, moons: [] },
+        { name: "Earth", size: 1, distance: 15, color: 0x0000ff, speed: 0.01, moons: [
+            { name: "Moon", size: 0.3, distance: 1.5, speed: 0.05, color: 0x888888 }
+        ] },
+        { name: "Mars", size: 0.7, distance: 20, color: 0xff0000, speed: 0.008, moons: [
+            { name: "Phobos", size: 0.2, distance: 1.2, speed: 0.07, color: 0xaaaaaa },
+            { name: "Deimos", size: 0.15, distance: 2, speed: 0.05, color: 0xbbbbbb }
+        ] },
+        { name: "Jupiter", size: 2, distance: 40, color: 0xffa500, speed: 0.005, moons: [
+            { name: "Io", size: 0.4, distance: 3, speed: 0.08, color: 0xffcc66 },
+            { name: "Europa", size: 0.3, distance: 4.5, speed: 0.06, color: 0xdddddd },
+            { name: "Ganymede", size: 0.5, distance: 6, speed: 0.04, color: 0x999999 },
+            { name: "Callisto", size: 0.45, distance: 7.5, speed: 0.03, color: 0x888888 }
+        ] },
+        { name: "Saturn", size: 1.5, distance: 60, color: 0xffd700, speed: 0.003, moons: [
+            { name: "Titan", size: 0.5, distance: 4, speed: 0.04, color: 0xcc8800 },
+            { name: "Rhea", size: 0.3, distance: 5, speed: 0.035, color: 0xbbbbbb },
+            { name: "Iapetus", size: 0.3, distance: 6.5, speed: 0.03, color: 0xaaaaaa },
+            { name: "Dione", size: 0.25, distance: 7.5, speed: 0.025, color: 0xcccccc }
+        ] },
+        { name: "Uranus", size: 1.2, distance: 80, color: 0x00ffff, speed: 0.002, moons: [
+            { name: "Miranda", size: 0.2, distance: 3, speed: 0.05, color: 0xbbbbbb },
+            { name: "Ariel", size: 0.3, distance: 4, speed: 0.04, color: 0xcccccc },
+            { name: "Umbriel", size: 0.3, distance: 5, speed: 0.035, color: 0x999999 },
+            { name: "Titania", size: 0.4, distance: 6, speed: 0.03, color: 0xdddddd }
+        ] },
+        { name: "Neptune", size: 1.1, distance: 100, color: 0x0000ff, speed: 0.001, moons: [
+            { name: "Triton", size: 0.5, distance: 3, speed: 0.05, color: 0xbbbbbb }
+        ] },
+    ];
+
+    // Create Planets, Orbits, and Moons
+    const planetMeshes = [];
+    planets.forEach(p => {
+        const geometry = new THREE.SphereGeometry(p.size, 32, 32);
+        const material = new THREE.MeshStandardMaterial({ color: p.color });
+        const planet = new THREE.Mesh(geometry, material);
+        planet.position.x = p.distance;
+        scene.add(planet);
+
+        // Label for the planet
+        const planetLabel = createLabel(p.name, planet.position);
+        scene.add(planetLabel);
+
+        // Orbit Trace
+        const orbitGeometry = new THREE.BufferGeometry();
+        const orbitVertices = [];
+        for (let i = 0; i <= 100; i++) {
+            const angle = (i / 100) * Math.PI * 2;
+            let dist = p.distance;
+            orbitVertices.push(dist * Math.cos(angle), 0, dist * Math.sin(angle));
+        }
+        orbitGeometry.setAttribute('position', new THREE.Float32BufferAttribute(orbitVertices, 3));
+        const orbitMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+        scene.add(new THREE.LineLoop(orbitGeometry, orbitMaterial));
+
+        // Moons
+        const moons = [];
+        p.moons.forEach(m => {
+            const moonGeometry = new THREE.SphereGeometry(m.size, 16, 16);
+            const moonMaterial = new THREE.MeshStandardMaterial({ color: m.color });
+            const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+            scene.add(moon);
+
+            // Label for the moon
+            const moonLabel = createLabel(m.name, moon.position);
+            scene.add(moonLabel);
+
+            moons.push({ mesh: moon, data: m, angle: Math.random() * Math.PI * 2 });
+        });
+
+        planetMeshes.push({ mesh: planet, data: p, angle: Math.random() * Math.PI * 2, moons });
+    });
+
+    camera.position.set(0, 10, 50);
+
+    function animate() {
+        requestAnimationFrame(animate);
+        planetMeshes.forEach(p => {
+            p.angle += p.data.speed;
+            p.mesh.position.x = Math.cos(p.angle) * p.data.distance;
+            p.mesh.position.z = Math.sin(p.angle) * p.data.distance;
+            
+            // Update label position for planet
+            const planetLabel = p.mesh.children.find(child => child instanceof THREE.Sprite);
+            if (planetLabel) planetLabel.position.copy(p.mesh.position);
+
+            p.moons.forEach(m => {
+                m.angle += m.data.speed;
+                m.mesh.position.x = p.mesh.position.x + Math.cos(m.angle) * m.data.distance;
+                m.mesh.position.z = p.mesh.position.z + Math.sin(m.angle) * m.data.distance;
+
+                // Update label position for moon
+                const moonLabel = m.mesh.children.find(child => child instanceof THREE.Sprite);
+                if (moonLabel) moonLabel.position.copy(m.mesh.position);
+            });
+        });
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    animate();
+</script>
+
+</body>
+</html>
