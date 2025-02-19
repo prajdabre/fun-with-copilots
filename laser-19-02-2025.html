@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bouncing Laser Beam with Rotating Emitter and Adjustable Power</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+    }
+    canvas {
+      background: #000;
+      border: 2px solid white;
+    }
+    .instructions {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-size: 18px;
+      font-family: Arial, sans-serif;
+      max-width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="laserCanvas"></canvas>
+  <div class="instructions">
+    <h3>Instructions</h3>
+    <p>Use the following keys to control the laser:</p>
+    <ul>
+      <li><strong>Arrow Up</strong>: Move emitter up</li>
+      <li><strong>Arrow Down</strong>: Move emitter down</li>
+      <li><strong>Arrow Left</strong>: Move emitter left</li>
+      <li><strong>Arrow Right</strong>: Move emitter right</li>
+      <li><strong>A</strong>: Rotate emitter counterclockwise</li>
+      <li><strong>D</strong>: Rotate emitter clockwise</li>
+      <li><strong>+</strong>: Increase beam power (less fading)</li>
+      <li><strong>-</strong>: Decrease beam power (more fading)</li>
+    </ul>
+    <p>The laser will reflect off the boundaries of the 500x500 box.</p>
+    <p>Every second, the laser color will change randomly!</p>
+  </div>
+  <script>
+    const canvas = document.getElementById("laserCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Set up a 500x500 box.
+    const boxSize = 500;
+    canvas.width = boxSize;
+    canvas.height = boxSize;
+
+    // The emitter: its position is inside the box, can be moved with arrow keys,
+    // and it has an angle (in radians) that determines the beam direction.
+    let emitter = { 
+      x: boxSize / 2, 
+      y: boxSize / 2, 
+      radius: 10, 
+      angle: 0.3  // Initial angle in radians
+    };
+
+    // The beam tip is separate from the emitter. It starts at the emitter.
+    // Its velocity is determined by the emitter's angle.
+    const beamSpeed = 8; // pixels per frame
+    let beam = {
+      x: emitter.x,
+      y: emitter.y,
+      vx: Math.cos(emitter.angle) * beamSpeed,
+      vy: Math.sin(emitter.angle) * beamSpeed
+    };
+
+    // We'll record bounce (collision) points.
+    let bouncePoints = [];
+
+    // Laser color (changes every second)
+    let laserColor = "#ff0000";
+    function getRandomColor() {
+      const letters = "0123456789ABCDEF";
+      let color = "#";
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+    setInterval(() => {
+      laserColor = getRandomColor();
+    }, 1000);
+
+    // Power of the beam, affecting how much it fades.
+    let beamPower = 500; // Distance over which the beam fades (larger = less fading)
+    function changeBeamPower(amount) {
+      beamPower = Math.max(100, Math.min(10000, beamPower + amount)); // Keep within a reasonable range
+    }
+
+    // Update the beam tip: move it and handle bouncing off the walls.
+    function updateBeam() {
+      beam.x += beam.vx;
+      beam.y += beam.vy;
+
+      let collided = false;
+      let collisionPoint = null;
+
+      // Check horizontal boundaries.
+      if (beam.x < 0) {
+        beam.x = 0;
+        beam.vx = -beam.vx;
+        collided = true;
+        collisionPoint = { x: 0, y: beam.y };
+      } else if (beam.x > boxSize) {
+        beam.x = boxSize;
+        beam.vx = -beam.vx;
+        collided = true;
+        collisionPoint = { x: boxSize, y: beam.y };
+      }
+      // Check vertical boundaries.
+      if (beam.y < 0) {
+        beam.y = 0;
+        beam.vy = -beam.vy;
+        collided = true;
+        collisionPoint = { x: beam.x, y: 0 };
+      } else if (beam.y > boxSize) {
+        beam.y = boxSize;
+        beam.vy = -beam.vy;
+        collided = true;
+        collisionPoint = { x: beam.x, y: boxSize };
+      }
+
+      // Record the bounce point if a collision occurred.
+      if (collided && collisionPoint) {
+        bouncePoints.push(collisionPoint);
+      }
+    }
+
+    // When the emitter moves or rotates, reset the beam.
+    // This clears any stored bounce points and repositions the beam tip at the emitter,
+    // while also updating the beam's velocity based on the emitter's angle.
+    function resetBeam() {
+      bouncePoints = [];
+      beam.x = emitter.x;
+      beam.y = emitter.y;
+      beam.vx = Math.cos(emitter.angle) * beamSpeed;
+      beam.vy = Math.sin(emitter.angle) * beamSpeed;
+    }
+
+    // Draw the scene: the box, the emitter (with a direction indicator), and the bouncing beam.
+    function drawScene() {
+      ctx.clearRect(0, 0, boxSize, boxSize);
+
+      // Draw the boundary box.
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, boxSize, boxSize);
+
+      // Draw the emitter.
+      ctx.fillStyle = "blue";
+      ctx.beginPath();
+      ctx.arc(emitter.x, emitter.y, emitter.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw a line indicating the emitter's direction.
+      const lineLength = emitter.radius * 1.5;
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(emitter.x, emitter.y);
+      ctx.lineTo(
+        emitter.x + Math.cos(emitter.angle) * lineLength,
+        emitter.y + Math.sin(emitter.angle) * lineLength
+      );
+      ctx.stroke();
+
+      // Draw the beam as a polyline: from emitter → bouncePoints → current beam tip.
+      // Fading is applied so segments farther from the emitter are more transparent.
+      const points = [{ x: emitter.x, y: emitter.y }, ...bouncePoints, { x: beam.x, y: beam.y }];
+      let totalDist = 0;
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = laserColor;
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i + 1];
+        const segDist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+        const midDist = totalDist + segDist / 2;
+        const alpha = Math.max(1 - midDist / beamPower, 0); // Adjust fading over distance.
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = laserColor;
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+        totalDist += segDist;
+      }
+      ctx.globalAlpha = 1; // Reset global alpha.
+    }
+
+    // Animation loop.
+    function animate() {
+      updateBeam();
+      drawScene();
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Handle keyboard controls:
+    // Arrow keys move the emitter.
+    // A and D rotate the emitter (and update the beam direction accordingly).
+    const emitterSpeed = 5;
+    document.addEventListener("keydown", (event) => {
+      let changed = false;
+      switch (event.key) {
+        case "ArrowUp":
+          if (emitter.y > emitter.radius) {
+            emitter.y -= emitterSpeed;
+            changed = true;
+          }
+          break;
+        case "ArrowDown":
+          if (emitter.y < boxSize - emitter.radius) {
+            emitter.y += emitterSpeed;
+            changed = true;
+          }
+          break;
+        case "ArrowLeft":
+          if (emitter.x > emitter.radius) {
+            emitter.x -= emitterSpeed;
+            changed = true;
+          }
+          break;
+        case "ArrowRight":
+          if (emitter.x < boxSize - emitter.radius) {
+            emitter.x += emitterSpeed;
+            changed = true;
+          }
+          break;
+        case "a":
+          emitter.angle -= 0.1;
+          changed = true;
+          break;
+        case "d":
+          emitter.angle += 0.1;
+          changed = true;
+          break;
+        case "+":
+          changeBeamPower(50); // Increase power, decrease fading.
+          break;
+        case "-":
+          changeBeamPower(-50); // Decrease power, increase fading.
+          break;
+      }
+      if (changed) {
+        resetBeam();
+      }
+    });
+  </script>
+</body>
+</html>
