@@ -1,130 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solar System Simulation</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            overflow: hidden;
-            color: white;
-            font-family: Arial, sans-serif;
-        }
-        canvas {
-            display: block;
-            border: 1px solid red; /* For debugging */
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar System Simulation</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      overflow: hidden;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+      border: 1px solid red; /* For debugging */
+    }
+  </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <div id="debug">Debug Info</div>
+  <canvas id="canvas"></canvas>
+  <div id="debug">Debug Info</div>
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const debug = document.getElementById('debug');
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const debug = document.getElementById('debug');
 
-        canvas.width = Math.max(window.innerWidth, 800);
-        canvas.height = Math.max(window.innerHeight, 800);
-        debug.innerText = `Canvas Size: ${canvas.width}x${canvas.height}`;
+    canvas.width = Math.max(window.innerWidth, 800);
+    canvas.height = Math.max(window.innerHeight, 800);
+    debug.innerText = `Canvas Size: ${canvas.width}x${canvas.height}`;
 
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
 
-        function drawOrbit(radius) {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.stroke();
-        }
+    // Draw an elliptical orbit with semi‑major axis a and eccentricity e.
+    // We shift the ellipse by a * e so that the Sun (at centerX, centerY) is at one focus.
+    function drawEllipticalOrbit(a, e) {
+      const b = a * Math.sqrt(1 - e * e);
+      ctx.beginPath();
+      ctx.ellipse(centerX - a * e, centerY, a, b, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.stroke();
+    }
 
-        function drawPlanet(x, y, radius, color, name) {
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-            
-            ctx.fillStyle = 'white';
-            ctx.font = '12px Arial';
-            ctx.fillText(name, x + radius + 5, y);
-        }
+    function drawPlanet(x, y, radius, color, name) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
 
-        function drawAsteroid(x, y, size) {
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fillStyle = 'gray';
-            ctx.fill();
-        }
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText(name, x + radius + 5, y);
+    }
 
-        let frameCount = 0;
+    function drawAsteroid(x, y, size) {
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = 'gray';
+      ctx.fill();
+    }
 
-        const planets = [
-            { name: 'Mercury', radius: 3, color: 'gray', orbit: 60, angle: 0, speed: 2.5 },
-            { name: 'Venus', radius: 6, color: 'yellow', orbit: 90, angle: 0, speed: 2.0 },
-            { name: 'Earth', radius: 7, color: 'blue', orbit: 130, angle: 0, speed: 1.8 },
-            { name: 'Mars', radius: 5, color: 'red', orbit: 170, angle: 0, speed: 1.5 },
-            { name: 'Jupiter', radius: 12, color: 'orange', orbit: 250, angle: 0, speed: 1.0 },
-            { name: 'Saturn', radius: 10, color: 'gold', orbit: 300, angle: 0, speed: 0.8 },
-            { name: 'Uranus', radius: 8, color: 'lightblue', orbit: 350, angle: 0, speed: 0.6 },
-            { name: 'Neptune', radius: 8, color: 'blue', orbit: 400, angle: 0, speed: 0.5 },
-            { name: 'Pluto', radius: 3, color: 'white', orbit: 440, angle: 0, speed: 0.3 }
-        ];
+    let frameCount = 0;
 
-        const asteroidBelt = [];
-        for (let i = 0; i < 150; i++) {
-            let orbit = Math.random() * (240 - 180) + 180;
-            let angle = Math.random() * Math.PI * 2;
-            let speed = Math.random() * 0.4 + 0.2;
-            asteroidBelt.push({ orbit, angle, speed });
-        }
+    // Define our planets.
+    // "orbit" represents the semi‑major axis.
+    // Note: We updated Pluto’s orbit to 500 instead of 440.
+    const planets = [
+      { name: 'Mercury', radius: 3, color: 'gray',   orbit: 60,  angle: 0, speed: 2.5, eccentricity: 0.2056 },
+      { name: 'Venus',   radius: 6, color: 'yellow', orbit: 90,  angle: 0, speed: 2.0, eccentricity: 0.0068 },
+      { name: 'Earth',   radius: 7, color: 'blue',   orbit: 130, angle: 0, speed: 1.8, eccentricity: 0.0167 },
+      { name: 'Mars',    radius: 5, color: 'red',    orbit: 170, angle: 0, speed: 1.5, eccentricity: 0.0934 },
+      { name: 'Jupiter', radius: 12, color: 'orange', orbit: 250, angle: 0, speed: 1.0, eccentricity: 0.0489 },
+      { name: 'Saturn',  radius: 10, color: 'gold',   orbit: 300, angle: 0, speed: 0.8, eccentricity: 0.0565 },
+      { name: 'Uranus',  radius: 8, color: 'lightblue', orbit: 350, angle: 0, speed: 0.6, eccentricity: 0.046 },
+      { name: 'Neptune', radius: 8, color: 'blue',   orbit: 400, angle: 0, speed: 0.5, eccentricity: 0.0086 },
+      // Pluto's orbit now:
+      // a = 500, e = 0.2488 gives r_min ≈ 500*(1-0.2488) ≈ 375.6,
+      // which is above Uranus's r_max (≈366.1) and below Neptune's r_min (≈396.56).
+      { name: 'Pluto',   radius: 3, color: 'white',  orbit: 500, angle: 0, speed: 0.3, eccentricity: 0.2488 }
+    ];
 
-        const kuiperBelt = [];
-        for (let i = 0; i < 200; i++) {
-            let orbit = Math.random() * (650 - 600) + 450;
-            let angle = Math.random() * Math.PI * 2;
-            let speed = Math.random() * 0.2 + 0.1;
-            kuiperBelt.push({ orbit, angle, speed });
-        }
+    // For the asteroid belt, choose a narrow range of semi‑major axes and assign a slight eccentricity.
+    const asteroidBelt = [];
+    for (let i = 0; i < 150; i++) {
+      let a = Math.random() * (220 - 200) + 200; // semi‑major axis between 200 and 220
+      let angle = Math.random() * Math.PI * 2;
+      let speed = Math.random() * 0.4 + 0.2;
+      asteroidBelt.push({ a, angle, speed, eccentricity: 0.05 });
+    }
 
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            frameCount++;
+    // For the Kuiper belt, choose a narrow range as well.
+    const kuiperBelt = [];
+    for (let i = 0; i < 200; i++) {
+      let a = Math.random() * (480 - 450) + 450; // semi‑major axis between 450 and 480
+      let angle = Math.random() * Math.PI * 2;
+      let speed = Math.random() * 0.2 + 0.1;
+      kuiperBelt.push({ a, angle, speed, eccentricity: 0.05 });
+    }
 
-            drawPlanet(centerX, centerY, 20, 'yellow', 'Sun');
-            planets.forEach(planet => drawOrbit(planet.orbit));
+    // Given a semi‑major axis (a), eccentricity (e), and current angle (θ),
+    // compute the current distance from the Sun using the ellipse formula:
+    // r = a(1-e²) / (1+e*cos(θ))
+    function computeEllipticalRadius(a, e, theta) {
+      return a * (1 - e * e) / (1 + e * Math.cos(theta));
+    }
 
-            asteroidBelt.forEach(asteroid => {
-                asteroid.angle += asteroid.speed * (Math.PI / 180);
-                const x = centerX + Math.cos(asteroid.angle) * asteroid.orbit;
-                const y = centerY + Math.sin(asteroid.angle) * asteroid.orbit;
-                drawAsteroid(x, y, Math.random() * 2 + 1);
-            });
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      frameCount++;
 
-            kuiperBelt.forEach(asteroid => {
-                asteroid.angle += asteroid.speed * (Math.PI / 180);
-                const x = centerX + Math.cos(asteroid.angle) * asteroid.orbit;
-                const y = centerY + Math.sin(asteroid.angle) * asteroid.orbit;
-                drawAsteroid(x, y, Math.random() * 2 + 1);
-            });
+      // Draw the Sun at the center.
+      drawPlanet(centerX, centerY, 20, 'yellow', 'Sun');
 
-            planets.forEach(planet => {
-                planet.angle += planet.speed * (Math.PI / 180);
-                const x = centerX + Math.cos(planet.angle) * planet.orbit;
-                const y = centerY + Math.sin(planet.angle) * planet.orbit;
-                drawPlanet(x, y, planet.radius, planet.color, planet.name);
-            });
+      // Draw orbits for each planet.
+      planets.forEach(planet => {
+        drawEllipticalOrbit(planet.orbit, planet.eccentricity);
+      });
 
-            if (frameCount % 60 === 0) {
-                debug.innerText = `Frames: ${frameCount}, Canvas Size: ${canvas.width}x${canvas.height}`;
-            }
-            requestAnimationFrame(animate);
-        }
+      // Animate asteroid belt objects along their elliptical orbits.
+      asteroidBelt.forEach(asteroid => {
+        asteroid.angle += asteroid.speed * (Math.PI / 180);
+        let r = computeEllipticalRadius(asteroid.a, asteroid.eccentricity, asteroid.angle);
+        const x = centerX + r * Math.cos(asteroid.angle);
+        const y = centerY + r * Math.sin(asteroid.angle);
+        drawAsteroid(x, y, Math.random() * 2 + 1);
+      });
 
-        animate();
-    </script>
+      // Animate Kuiper belt objects.
+      kuiperBelt.forEach(obj => {
+        obj.angle += obj.speed * (Math.PI / 180);
+        let r = computeEllipticalRadius(obj.a, obj.eccentricity, obj.angle);
+        const x = centerX + r * Math.cos(obj.angle);
+        const y = centerY + r * Math.sin(obj.angle);
+        drawAsteroid(x, y, Math.random() * 2 + 1);
+      });
+
+      // Animate each planet along its elliptical orbit.
+      planets.forEach(planet => {
+        planet.angle += planet.speed * (Math.PI / 180);
+        let r = computeEllipticalRadius(planet.orbit, planet.eccentricity, planet.angle);
+        const x = centerX + r * Math.cos(planet.angle);
+        const y = centerY + r * Math.sin(planet.angle);
+        drawPlanet(x, y, planet.radius, planet.color, planet.name);
+      });
+
+      if (frameCount % 60 === 0) {
+        debug.innerText = `Frames: ${frameCount}, Canvas Size: ${canvas.width}x${canvas.height}`;
+      }
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
 </body>
 </html>
